@@ -55,6 +55,10 @@ plugins:
 plugins:
   - jekyll-archives
 jekyll-archives:
-  enabled: category
+  enabled: [category, tag]  # 启用所有类型的归档
   permalinks:
+    year: '/:year/'
+    month: '/:year/:month/'
+    day: '/:year/:month/:day/'
+    tag: '/tags/:name/'
     category: '/category/:name/'
