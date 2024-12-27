@@ -54,3 +54,7 @@ plugins:
 
 plugins:
   - jekyll-archives
+jekyll-archives:
+  enabled: category
+  permalinks:
+    category: '/category/:name/'
