@@ -1,7 +1,7 @@
 layout: post
 title: "POST-TITLE"
-date: 2024-12-27 hh:mm:ss -0000
-categories: CATEGORY-1 CATEGORY-2
+date: 2024-12-27
+categories: learning
 
 
 Coucou les amis!
