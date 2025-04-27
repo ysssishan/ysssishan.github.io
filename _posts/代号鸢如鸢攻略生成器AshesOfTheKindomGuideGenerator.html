@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>代号鸢/如鸢·攻略生成器</title>
+<style>
+    body {
+        background: #ced2bb;
+        font-family: 'Helvetica', 'STHeiti', sans-serif;
+        padding: 20px;
+        color: #333;
+    }
+    h1, h2 {
+        text-align: center;
+        color: #2c3e50;
+        font-family: 'Helvetica', 'STHeiti', serif;
+    }
+    .container {
+        max-width: 1200px;
+        margin: auto;
+    }
+    .panel {
+        background: #ffffff;
+        padding: 20px;
+        margin-bottom: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    input, select, button {
+        padding: 6px;
+        margin: 4px 0;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+    button {
+        background: #e6d7ab;
+        color: #333;
+        cursor: pointer;
+        transition: 0.3s;
+        font-family: 'Helvetica', 'STHeiti', serif;
+    }
+    button:hover {
+        background: #d6c79b;
+    }
+    table {
+        width: auto;
+        border-collapse: collapse;
+        margin-top: 20px;
+        box-shadow: 2px 2px 10px #aaa;
+        font-family: 'Helvetica', 'STHeiti', serif;
+    }
+    th, td {
+        padding: 6px 10px;
+        border: 1px solid #ddd;
+        text-align: center;
+        white-space: nowrap;
+    }
+    th {
+        background-color: #e6d7ab;
+    }
+    td {
+        background-color: #f9f4e1;
+    }
+    #character-inputs img {
+        width: 40px;
+        height: 40px;
+        border-radius: 5px;
+        vertical-align: middle;
+    }
+    .checkbox-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 5px 0;
+    }
+    .star-item {
+        display: flex;
+        align-items: center;
+        margin: 3px;
+    }
+    .star-item input[type="checkbox"] {
+        margin-right: 4px;
+    }
+    .star-item input[type="number"] {
+        width: 40px;
+        margin-left: 2px;
+    }
+    .character-column {
+        vertical-align: top;
+        min-width: 120px;
+    }
+    .attribute-row {
+        font-weight: bold;
+    }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <h1>代号鸢/如鸢·攻略生成器</h1>
+
+    <div class="panel">
+        <h2>基本设置</h2>
+        <label>关卡名字：</label>
+        <input type="text" id="stage-name" placeholder="请输入关卡名"><br><br>
+        <label>密探数量：</label>
+        <input type="number" id="character-count" value="3" min="1" max="5">
+        <button onclick="generateCharacterInputs()">生成密探信息输入表</button><br><br>
+        <label>回合数量：</label>
+        <input type="number" id="round-count" value="3" min="1" max="50">
+        <button onclick="generateRoundInputs()">生成回合行动输入表</button>
+    </div>
+
+    <div class="panel">
+        <h2>密探信息输入表</h2>
+        <div id="character-inputs"></div>
+    </div>
+
+    <div class="panel">
+        <h2>回合行动输入表</h2>
+        <div id="round-inputs"></div>
+    </div>
+
+    <div class="panel" style="text-align:center;">
+        <button onclick="generateTables()">生成攻略表格</button>
+        <button onclick="exportTablesToPNG()">导出为PNG</button>
+    </div>
+
+    <div class="panel">
+        <div id="character-table"></div>
+    </div>
+
+    <div class="panel">
+        <div id="round-table"></div>
+    </div>
+
+</div>
+
+<script>
+// 密探数据
+function sortByPinyin(arr) {
+    return arr.slice().sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
+}
+const spyList = sortByPinyin([
+    "陈登·黍王", "史子眇·赴烛",
+    "董白", "马腾", "戏学", "马超", "安期", "荀攸", "夏侯惇", "张仲景", "张辽", 
+    "阿蝉", "许攸", "李脱", "伍丹", "崔烈", "严颜", "蛾使",
+    "刘豹", "令狐茂", "刘繇", "诸葛瑾", "孔融", "甘宁", "蔡琰", "周瑜", "王粲", "鲁肃",
+    "颜良", "小乔", "陆绩", "李真", "徐稺", "甘缇", "关靖",
+    "蒯越", "凌统", "诸葛诞", "甄宓", "张郃", "程昱", "张修", "干吉", "孙权", "孙尚香", "郭解", "陆逊", "吕蒙",
+    "公孙珊", "文丑", "毛玠", "飞云", "周群",
+    "张昭", "张邈", "张飞", "荀彧", "郭嘉", "曹植", "太史慈",
+    "陈登", "史子眇", "王异", "蜂使", "雀使", "鸢使", "杨阜", "楼班", "绣球", "眭固", "山九", "高览",
+    "祢衡", "朱然", "董奉", "黄月英", "徐庶", "庞统", "华佗", "杨修",
+    "许曼", "第五天",
+    "张绣", "黄盖", "满宠", "张鲁", "张角", "张闿", "葛洪", "贾诩",
+    "严白虎"
+]);
+const MainStoneList = sortByPinyin([
+    "巨门", "廉贞", "破军", "七杀", "太阳", "太阴", "贪狼", "天府", "天机", "天同", "天相", "武曲", "紫薇"
+]);
+const AuxStoneList = sortByPinyin([
+    "八座", "地劫", "地空", "恩光", "红鸾", "火星", "解神", "铃星", "禄存", "擎羊", "三台", "天贵",
+    "天魁", "天梁", "天马", "天巫", "天刑", "天姚", "天钺", "陀螺", "文昌", "文曲", "阴煞", "右弼", "左辅"
+]);
+const AstroList = {
+    "陈登·黍王": ["初始能量+1", "防御时恢复生命", "初始能量+3", "河清海晏", "攻击力小幅提升", "最大生命中幅提升", "积善馀庆", "时和岁丰", "普攻伤害小幅增加", "雨顺物康", "攻击力中幅提升", "生命力低时攻击提升"],
+    "史子眇·赴烛": ["初始能量+1", "防御时恢复生命", "初始能量+3", "仁心护持", "攻击力小幅提升", "最大生命中幅提升", "念兹在兹", "身魂俱殁", "普攻伤害小幅增加", "重灵降诛", "攻击力中幅提升", "生命力低时攻击提升"],
+    "董白": ["攻击力中幅提升", "防御时恢复生命", "最大生命大幅提升", "发踪指示", "最大生命小幅提升", "初始能量+1", "汲可休息", "窅窅翳翳", "普攻伤害小幅增加", "观衅而动", "最大生命中幅提升", "生命力低时攻击提升"],
+    "马腾": ["初始能量+1", "防御时恢复生命", "初始能量+3", "纵骑驱骋", "攻击力小幅提升", "最大生命中幅提升", "荡荡如空", "地狱空", "普攻伤害小幅增加", "自彼氐羌", "攻击力中幅提升", "生命力低时攻击提升"],
+    "戏学": ["初始能量+1", "防御时恢复生命", "初始能量+4", "分身降低免伤值", "攻击力小幅提升", "最大生命中幅提升", "捉生替死", "膏泽丰壤", "普攻伤害小幅增加", "气谊相投", "攻击力中幅提升", "生命力低时攻击提升"],
+    "马超": ["普攻伤害中幅增加", "生命力低时攻击提升", "以攻为守", "技能伤害系数中幅增加", "普攻伤害小幅增加", "西凉坚壁", "攻击力小幅提升", "铁骑当千", "防御时恢复生命", "攻击力中幅提升", "嘲讽回合提升", "出手法"],
+    "安期": ["初始能量+1", "防御时恢复生命", "虚而不屈", "攻击力大幅提升", "攻击力小幅提升", "最大生命中幅提升", "动而愈出", "取予然诺", "普攻伤害小幅增加", "我独若遗", "攻击力中幅提升", "生命力低时攻击提升"],
+    "荀攸": ["初始能量+1", "防御时恢复生命", "于无声处", "惊雷低声", "攻击力小幅提升", "技能伤害中幅增加", "一智谋众", "初始能量+3", "普攻伤害小幅增加", "隐幕", "攻击力中幅提升", "生命力低时攻击提升"],
+    "夏侯惇": ["防御时恢复生命", "生命高时攻击提升", "亲力亲为", "临机应变", "普攻伤害小幅增加", "初始能量+1", "拔矢啖晴", "防御减伤提升", "普攻伤害中幅增加", "攻击力中幅提升", "进入战斗获得能量", "陷阵护主"],
+    "张仲景": ["生命高时攻击提升", "治疗效果大幅提升", "队长技强化", "五藏论额外提供减伤", "治疗效果小幅提升", "初始能量+1", "最大生命小幅提升", "防御减伤提升", "治疗效果中幅提升", "最大生命中幅提升", "普攻附加群对减伤", "技能额外选择目标"],
+    "张辽": ["队长技强化", "无路可退", "生命低时攻击提升", "技能效果所需连击降低", "普攻伤害小幅增加", "初始能量+1", "攻击力小幅提升", "防御减伤提升", "普攻伤害中幅增加", "攻击力中幅提升", "追加攻击概率提升", "技能也能获得连击"],
+    "阿蝉": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "追击次数增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "追击伤害提升", "普攻伤害中幅增加"],
+    "许攸": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "李脱": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "技能强化，普攻免伤提升", "最大生命小幅提升", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "最大生命大幅提升", "技能伤害系数大幅增加", "初始能量+2", "最大生命中幅提升"],
+    "伍丹": ["最大生命中幅提升", "生命力低时攻击提升", "生命高时攻击提升", "防御时回复生命", "治疗效果小幅提升", "初始能量+1", "防御减伤提升", "最大生命小幅提升", "治疗效果大幅提升", "最大生命大幅提升", "初始能量+2", "治疗效果中幅提升"],
+    "崔烈": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "严颜": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "蛾使": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "刘豹": ["初始能量+1", "防御时恢复生命", "铁骑", "霜重鼓寒", "攻击力小幅提升", "最大生命中幅提升", "大漠穷秋", "关山难越", "普攻伤害小幅增加", "春风不度", "攻击力中幅提升", "雪霁初晴"],
+    "令狐茂": ["初始能量+1", "初始能量+4", "长生亦苦", "去日苦多", "攻击力小幅提升", "最大生命中幅提升", "灵河有源", "石上三生", "普攻伤害小幅增加", "历世长存", "攻击力中幅提升", "生命力低时攻击提升"],
+    "刘繇": ["最大生命中幅提升", "最大生命小幅提升", "兔死狗烹", "千金市骨", "攻击力小幅提升", "防御时恢复生命", "天命在身", "渊图远算", "攻击力中幅提升", "攻击力大幅提升", "等量齐观", "生命力低时攻击提升"],
+    "诸葛瑾": ["随方就圆", "生命力低时攻击提升", "深沉穆远", "常棣", "普攻伤害小幅增加", "技能伤害中幅增加", "岂无鹡鸰", "济威以仁", "初始能量+1", "寒霜抚矢", "白露震霆", "技能伤害小幅增加"],
+    "孔融": ["攻击力中幅提升", "生命力低时攻击提升", "初始能量+4", "君君臣臣", "攻击力小幅提升", "防御时恢复生命", "包元履徳", "天道有常", "普攻伤害小幅增加", "普攻伤害大幅增加", "普攻伤害中幅增加", "初始能量+1"],
+    "甘宁": ["最大生命中幅提升", "生命高时攻击提升", "掠夺攻击力", "坐享其成", "普攻伤害小幅增加", "技能伤害中幅增加", "穷凶恶极", "同流合污", "防御时恢复生命", "普攻伤害中幅增加", "巧取豪夺", "技能伤害小幅增加"],
+    "蔡琰": ["防御时恢复生命", "生命高时攻击提升", "初始能量+2", "白水鉴心", "普攻伤害小幅增加", "初始能量+1", "攻击力小幅提升", "防御减伤提升", "普攻伤害中幅增加", "攻击力中幅提升", "记录效果延长", "过目不忘"],
+    "周瑜": ["防御时恢复生命", "生命高时攻击提升", "琴式变换", "初始能量+2", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害中幅增加", "技能伤害系数中幅增加", "余音绕梁", "七弦音"],
+    "王粲": ["初始能量+1", "技能消耗能量-1", "生命高时攻击提升", "回合结束恢复血量", "普攻伤害小幅增加", "提升全队攻击但受伤提升", "攻击力小幅提升", "防御减伤提升", "治疗效果中幅提升", "攻击力中幅提升", "同生共死回合增加", "技能提供护盾"],
+    "鲁肃": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "技能劝退概率提升", "普攻伤害中幅增加"],
+    "颜良": ["最大生命中幅提升", "生命力低时攻击提升", "生命高时攻击提升", "援护概率提升", "普攻伤害小幅增加", "初始能量+1", "最大生命小幅提升", "防御减伤提升", "普攻伤害大幅增加", "最大生命大幅提升", "攻击恢复生命", "普攻伤害中幅增加"],
+    "小乔": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "攻击力中幅提升", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "技能伤害系数大幅增加", "技能强化水属性密探", "初始能量+2", "普攻伤害中幅增加"],
+    "陆绩": ["技能伤害系数中幅增加", "普攻伤害大幅增加", "生命高时攻击提升", "防御时回复生命", "普攻伤害小幅增加", "初始能量+1", "技能伤害小幅增加", "防御减伤提升", "技能伤害系数大幅增加", "普攻脆弱概率提升", "初始能量+2", "普攻伤害中幅增加"],
+    "李真": ["攻击力中幅提升", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "攻击力小幅提升", "防御减伤提升", "普攻伤害大幅增加", "攻击力大幅提升", "初始能量+2", "普攻伤害中幅增加"],
+    "徐稺": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "甘缇": ["攻击力中幅提升", "生命力低时攻击提升", "生命高时攻击提升", "普攻强化，技能免伤提升", "普攻伤害小幅增加", "初始能量+1", "攻击力小幅提升", "防御减伤提升", "普攻伤害大幅增加", "攻击力大幅提升", "初始能量+2", "普攻伤害中幅增加"],
+    "关靖": ["最大生命中幅提升", "生命力低时攻击提升", "生命高时攻击提升", "防御时回复生命", "治疗效果小幅提升", "初始能量+1", "最大生命小幅提升", "防御减伤提升", "治疗效果大幅提升", "最大生命大幅提升", "初始能量+2", "治疗效果中幅提升"],
+    "蒯越": ["初始能量+1", "防御时恢复生命", "初始能量+3", "为王前驱", "攻击力小幅提升", "最大生命中幅提升", "营营何求", "沧海可越", "普攻伤害小幅增加", "翼翼上弼", "攻击力中幅提升", "生命力低时攻击提升"],
+    "凌统": ["最大生命中幅提升", "最大生命小幅提升", "声名烈烈", "初始能量+3", "攻击力小幅提升", "防御时恢复生命", "共愤同仇", "济河焚舟", "攻击力中幅提升", "最大生命大幅提升", "枕戈饮血", "生命力低时攻击提升"],
+    "诸葛诞": ["攻击力中幅提升", "防御时恢复生命", "吹火吐焰", "双生", "最大生命小幅提升", "初始能量+1", "笳鼓喧喧", "同气连枝", "攻击力小幅提升", "折冲御悔", "最大生命中幅提升", "普攻伤害小幅增加"],
+    "甄宓": ["攻击力中幅提升", "生命力低时攻击提升", "初始能量+3", "暗线", "攻击力小幅提升", "防御时恢复生命", "压制", "反戈", "最大生命小幅提升", "最大生命大幅提升", "最大生命中幅提升", "初始能量+1"],
+    "张郃": ["攻击力中幅提升", "生命高时攻击提升", "使用技能后防御", "乘机应变", "攻击力小幅提升", "防御时恢复生命", "顺风扯旗", "火属性密探回复生命", "治疗效果中幅提升", "治疗效果小幅提升", "治疗效果大幅提升", "初始能量+1"],
+    "程昱": ["防御时恢复生命", "明哲保身", "血肉阴谋", "生命高时攻击提升", "技能伤害小幅增加", "初始能量+1", "审时度势", "防御减伤提升", "技能伤害中幅增加", "攻击力中幅提升", "知止不殆", "等价交换"],
+    "张修": ["生命高时攻击提升", "技能消耗降低但伤害降低", "敌人死亡提升攻击", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "攻击力小幅提升", "防御减伤提升", "普攻伤害中幅增加", "攻击力中幅提升", "队长技额外强化", "强化生存能力"],
+    "干吉": ["攻击力中幅提升", "生命力低时攻击提升", "强化普攻", "普攻伤害中幅增加", "普攻伤害小幅增加", "初始能量+1", "攻击力小幅提升", "防御减伤提升", "普攻技能伤害增加", "攻击力大幅提升", "死亡后更快复活", "强化技能"],
+    "孙权": ["防御时恢复生命", "生命力低时攻击提升", "受击时获得减伤", "技能额外强化", "攻击力小幅提升", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "攻击力中幅提升", "技能伤害系数中幅增加", "释放技能后获得剑", "防御时嘲讽并减伤"],
+    "孙尚香": ["初始能量+1", "防御时恢复生命", "生命高时攻击提升", "普攻变为全体伤害", "普攻伤害小幅增加", "技能变为全体伤害", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害中幅增加", "技能伤害系数中幅增加", "全队可以暴击", "暴击效果提升"],
+    "郭解": ["技能伤害系数中幅增加", "生命力低时攻击提升", "变阵", "郭解不再会退场", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害中幅增加", "技能伤害系数大幅增加", "受击降低敌人攻击", "普攻盾"],
+    "陆逊": ["防御时恢复生命", "生命高时攻击提升", "普攻和技能都会附加灼伤", "技能消耗能量-1", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害中幅增加", "技能伤害系数中幅增加", "队长技额外强化", "技能消耗提升但效果更强"],
+    "吕蒙": ["防御时恢复生命", "变身概率提升", "生命高时攻击提升", "必定额外反击", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害中幅增加", "技能伤害系数中幅增加", "攻击附加灼伤", "变身时提升属性"],
+    "公孙珊": ["攻击力中幅提升", "初始能量+1", "普攻伤害大幅增加", "初始能量+2", "普攻伤害小幅增加", "最大生命中幅提升", "入道状态必定失控", "最大生命大幅提升", "普攻强化，技能免伤提升", "攻击力小幅提升", "生命高时攻击提升", "普攻伤害中幅增加"],
+    "文丑": ["攻击力中幅提升", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "攻击力小幅提升", "防御减伤提升", "普攻伤害大幅增加", "攻击力大幅提升", "技能不再消耗生命", "普攻伤害中幅增加"],
+    "毛玠": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "飞云": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "周群": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "张昭": ["攻击力中幅提升", "生命力低时攻击提升", "肃杀", "八风回", "攻击力小幅提升", "防御时恢复生命", "维山崔嵬", "萧瑟", "普攻伤害小幅增加", "初始能量+3", "普攻伤害中幅增加", "初始能量+1"],
+    "张邈": ["攻击力中幅提升", "生命力低时攻击提升", "初始能量+3", "风属性密探强化", "普攻伤害小幅增加", "普攻伤害中幅增加", "无晴却有晴", "道同为谋", "攻击力小幅提升", "使用技能后防御", "最大生命中幅提升", "初始能量+1"],
+    "张飞": ["防御时恢复生命", "生命高时攻击提升", "断桥橫矛", "悬赏目标数增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害小幅增加", "防御减伤提升", "普攻伤害中幅增加", "普攻伤害大幅增加", "风挚雷行", "死战持续回合增加"],
+    "荀彧": ["回合开始时回复生命", "明以举贤", "生命高时攻击提升", "机鉴先识", "攻击力小幅提升", "以守为攻", "居中持重", "防御减伤提升", "技能伤害系数小幅增加", "痞雍三贤", "王佐之才", "普攻技能护盾提升"],
+    "郭嘉": ["初始能量+1", "生命力低时攻击提升", "死亡时提升全队属性", "血量消耗降低", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害中幅增加", "技能伤害系数中幅增加", "解析无限叠加", "强化与贾诩的联动"],
+    "曹植": ["攻击力中幅提升", "生命力低时攻击提升", "初始能量+3", "技能伤害大幅增加", "普攻伤害小幅增加", "技能伤害中幅增加", "音义即远", "洒落赋韵", "初始能量+1", "亲交从游", "最大生命中幅提升", "技能伤害小幅增加"],
+    "太史慈": ["普攻伤害中幅增加", "生命力低时攻击提升", "攻击力大幅提升", "技能伤害系数中幅增加", "普攻伤害小幅增加", "时间规划", "攻击力小幅提升", "新订单-合力攻击", "防御时恢复生命", "攻击力中幅提升", "新订单-禁止防御", "绩效激励"],
+    "陈登": ["最大生命中幅提升", "生命力低时攻击提升", "生命高时攻击提升", "普攻强化，技能免伤提升", "普攻伤害小幅增加", "初始能量+1", "最大生命小幅提升", "防御减伤提升", "普攻伤害大幅增加", "最大生命大幅提升", "初始能量+2", "普攻伤害中幅增加"],
+    "史子眇": ["最大生命中幅提升", "生命力低时攻击提升", "生命高时攻击提升", "防御时回复生命", "治疗效果小幅提升", "初始能量+1", "最大生命小幅提升", "防御减伤提升", "治疗效果大幅提升", "最大生命大幅提升", "技能提供减伤", "治疗效果中幅提升"],
+    "王异": ["防御时恢复生命", "普攻伤害大幅增加", "初始能量+2", "生命高时攻击提升", "普攻伤害小幅增加", "初始能量+1", "攻击力小幅提升", "防御减伤提升", "普攻伤害中幅增加", "攻击力中幅提升", "嘲讽效果提升", "震荡效果提升"],
+    "蜂使": ["最大生命中幅提升", "生命力低时攻击提升", "生命高时攻击提升", "普攻强化，技能免伤提升", "普攻伤害小幅增加", "初始能量+1", "最大生命小幅提升", "防御减伤提升", "普攻伤害大幅增加", "最大生命大幅提升", "初始能量+2", "普攻伤害中幅增加"],
+    "雀使": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "鸢使": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "杨阜": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "楼班": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "绣球": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "眭固": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "山九": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "高览": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "朱然": ["最大生命中幅提升", "最大生命小幅提升", "汤池之固", "初始能量+1", "攻击力小幅提升", "防御时恢复生命", "至刚至阳", "临危不挠", "攻击力中幅提升", "攻击力大幅提升", "强御不畏", "生命力低时攻击提升"],
+    "董奉": ["攻击力中幅提升", "防御时恢复生命", "扶正祛邪", "植杏成丛", "最大生命小幅提升", "治疗效果中幅提升", "随营医者", "使用技能后防御", "攻击力小幅提升", "着手成春", "最大生命中幅提升", "治疗效果小幅提升"],
+    "黄月英": ["攻击力中幅提升", "防御时恢复生命", "山川妈妈", "尸解", "最大生命小幅提升", "灵倾三台", "羽化", "应龙之盾", "攻击力小幅提升", "乾坤既定", "最大生命中幅提升", "初始能量+1"],
+    "徐庶": ["最大生命中幅提升", "生命高时攻击提升", "敌人较少时提升能力", "敌人较多时提升能力", "攻击力小幅提升", "技能伤害中幅增加", "谋无遗策", "技能后降低敌人抗性", "攻击力中幅提升", "青手力量偏向辅助", "剑气纵横", "技能伤害小幅增加"],
+    "庞统": ["防御时恢复生命", "鹦鹉投蛋伤害提升", "生命高时攻击提升", "雅兴内融", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害中幅增加", "技能伤害系数中幅增加", "鹦鹉学舌", "普攻变为群体伤害"],
+    "华佗": ["治疗效果提升", "提升攻击降低治疗", "生命高时攻击提升", "神纪岐黄伤害提升", "攻击力小幅提升", "初始能量+1", "最大生命小幅提升", "防御减伤提升", "攻击力中幅提升", "最大生命中幅提升", "弃医从武", "悬壶济世"],
+    "杨修": ["技能伤害系数中幅增加", "技能额外效果", "生命高时攻击提升", "队长技额外强化", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害中幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻概率回复能量"],
+    "祢衡": ["初始能量+1", "防御时恢复生命", "初始能量+4", "普攻伤害大幅增加", "攻击力小幅提升", "最大生命中幅提升", "伐竹为枪", "英明神武", "普攻伤害小幅增加", "风紧扯呼", "攻击力中幅提升", "游放心狂"],
+    "许曼": ["防御时恢复生命", "生命高时攻击提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害中幅增加", "技能伤害系数中幅增加", "麻痹概率提升", "初始能量+2"],
+    "第五天": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "初始能量+2", "普攻伤害中幅增加"],
+    "张绣": ["初始能量+1", "防御时恢复生命", "攻击力大幅提升", "骨饵犬狼", "攻击力小幅提升", "最大生命中幅提升", "孤阳偾", "磨牙吮血", "普攻伤害小幅增加", "饥兽群嗥", "攻击力中幅提升", "生命力低时攻击提升"],
+    "黄盖": ["初始能量+1", "防御时恢复生命", "攻击力大幅提升", "刃出封喉", "攻击力小幅提升", "最大生命中幅提升", "斑子", "敌明我暗", "普攻伤害小幅增加", "声如洪钟", "攻击力中幅提升", "生命力低时攻击提升"],
+    "满宠": ["最大生命中幅提升", "最大生命小幅提升", "幽明参半", "攻击力大幅提升", "攻击力小幅提升", "防御时恢复生命", "威刑肃物", "刮骨离髓", "攻击力中幅提升", "最大生命大幅提升", "严正判决", "生命力低时攻击提升"],
+    "张鲁": ["攻击力中幅提升", "生命力低时攻击提升", "夺纪夺算", "技能伤害系数大幅增加", "普攻伤害小幅增加", "技能伤害中幅增加", "阴属性密探强化", "伐身害命", "初始能量+1", "与张修联动", "斩灭尸", "技能伤害小幅增加"],
+    "张角": ["初始能量+1", "生命力低时攻击提升", "黄天", "无极", "普攻伤害小幅增加", "符水", "攻击力小幅提升", "反噬", "布道", "攻击力中幅提升", "苍天", "天宫"],
+    "张闿": ["普攻伤害中幅增加", "生命力低时攻击提升", "初始能量+2", "最大生命中幅提升", "普攻伤害小幅增加", "迅步潜影", "攻击力小幅提升", "技能触发持续伤害", "防御时恢复生命", "攻击力中幅提升", "飞镰横扫", "攻击力大幅提升"],
+    "葛洪": ["防御时恢复生命", "生命高时攻击提升", "技能后防御并回复", "阴属性密探强化", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害中幅增加", "技能伤害系数中幅增加", "技能消耗降低但伤害降低", "狡兔三窟"],
+    "贾诩": ["抽到凶时，伤害降低", "冷酷毒计", "伤害转移次数提升", "抽到吉时伤害提升", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害中幅增加", "技能伤害系数中幅增加", "看破无限叠加", "强化与郭嘉的联动"],
+    "严白虎": ["技能伤害系数中幅增加", "生命力低时攻击提升", "生命高时攻击提升", "普攻技能伤害增加", "普攻伤害小幅增加", "初始能量+1", "技能伤害系数小幅增加", "防御减伤提升", "普攻伤害大幅增加", "技能伤害系数大幅增加", "被动触发概率提升", "普攻伤害中幅增加"]
+};
+const StarLevels = ["1", "2", "3", "4", "5", "觉醒"];
+const spyImageDataset = {
+    "陈登·黍王": "陈登·黍王.png",
+    "史子眇·赴烛": "史子眇·赴烛.png",
+    "董白": "董白.png",
+    "马腾": "马腾.png",
+    "戏学": "戏学.png",
+    "马超": "马超.png",
+    "安期": "安期.png",
+    "荀攸": "荀攸.png",
+    "夏侯惇": "夏侯惇.png",
+    "张仲景": "张仲景.png",
+    "张辽": "张辽.png",
+    "阿蝉": "阿蝉.png",
+    "许攸": "许攸.png",
+    "李脱": "李脱.png",
+    "伍丹": "伍丹.png",
+    "崔烈": "崔烈.png",
+    "严颜": "严颜.png",
+    "蛾使": "蛾使.png",
+    "刘豹": "刘豹.png",
+    "令狐茂": "令狐茂.png",
+    "刘繇": "刘繇.png",
+    "诸葛瑾": "诸葛瑾.png",
+    "孔融": "孔融.png",
+    "甘宁": "甘宁.png",
+    "蔡琰": "蔡琰.png",
+    "周瑜": "周瑜.png",
+    "王粲": "王粲.png",
+    "鲁肃": "鲁肃.png",
+    "颜良": "颜良.png",
+    "小乔": "小乔.png",
+    "陆绩": "陆绩.png",
+    "李真": "李真.png",
+    "徐稺": "徐稺.png",
+    "甘缇": "甘缇.png",
+    "关靖": "关靖.png",
+    "蒯越": "蒯越.png",
+    "凌统": "凌统.png",
+    "诸葛诞": "诸葛诞.png",
+    "甄宓": "甄宓.png",
+    "张郃": "张郃.png",
+    "程昱": "程昱.png",
+    "张修": "张修.png",
+    "干吉": "干吉.png",
+    "孙权": "孙权.png",
+    "孙尚香": "孙尚香.png",
+    "郭解": "郭解.png",
+    "陆逊": "陆逊.png",
+    "吕蒙": "吕蒙.png",
+    "公孙珊": "公孙珊.png",
+    "文丑": "文丑.png",
+    "毛玠": "毛玠.png",
+    "飞云": "飞云.png",
+    "周群": "周群.png",
+    "张昭": "张昭.png",
+    "张邈": "张邈.png",
+    "张飞": "张飞.png",
+    "荀彧": "荀彧.png",
+    "郭嘉": "郭嘉.png",
+    "曹植": "曹植.png",
+    "太史慈": "太史慈.png",
+    "陈登": "陈登.png",
+    "史子眇": "史子眇.png",
+    "王异": "王异.png",
+    "蜂使": "蜂使.png",
+    "雀使": "雀使.png",
+    "鸢使": "鸢使.png",
+    "杨阜": "杨阜.png",
+    "楼班": "楼班.png",
+    "绣球": "绣球.png",
+    "眭固": "眭固.png",
+    "山九": "山九.png",
+    "高览": "高览.png",
+    "朱然": "朱然.png",
+    "董奉": "董奉.png",
+    "黄月英": "黄月英.png",
+    "徐庶": "徐庶.png",
+    "庞统": "庞统.png",
+    "华佗": "华佗.png",
+    "杨修": "杨修.png",
+    "祢衡": "祢衡.png",
+    "许曼": "许曼.png",
+    "第五天": "第五天.png",
+    "张绣": "张绣.png",
+    "黄盖": "黄盖.png",
+    "满宠": "满宠.png",
+    "张鲁": "张鲁.png",
+    "张角": "张角.png",
+    "张闿": "张闿.png",
+    "葛洪": "葛洪.png",
+    "贾诩": "贾诩.png",
+    "严白虎": "严白虎.png",
+    "default": "https://via.placeholder.com/80"
+};
+
+// 生成密探角色输入表（垂直布局）
+function generateCharacterInputs() {
+    const count = parseInt(document.getElementById('character-count').value);
+    const container = document.getElementById('character-inputs');
+    container.innerHTML = '';
+
+    let table = `<table><thead><tr><th>属性面板/密探</th>`;
+    for (let i = 0; i < count; i++) {
+        table += `<th class="character-column">密探${i+1}</th>`;
+    }
+    table += `</tr></thead><tbody>`;
+
+    // 基本属性行
+    const basicFields = [
+        { label: "名字", type: "select", options: spyList, id: "char-name" },
+        { label: "叠星", type: "select", options: StarLevels, id: "char-star" },
+        { label: "级别", type: "number", id: "char-level" },
+        { label: "修为", type: "number", id: "char-cultivation" },
+        { label: "血量", type: "number", id: "char-hp" },
+        { label: "攻击", type: "number", id: "char-atk" },
+        { label: "备注", type: "text", id: "char-note" }
+    ];
+
+    // 添加基本属性行
+    basicFields.forEach(field => {
+        table += `<tr><td class="attribute-row">${field.label}</td>`;
+        for (let i = 0; i < count; i++) {
+            table += `<td>`;
+            if (field.type === "select") {
+                table += `<select id="${field.id}-${i}" ${field.label === "名字" ? `onchange="updateAstroOptions(${i})"` : ''}>`;
+                field.options.forEach(opt => {
+                    table += `<option value="${opt}">${opt}</option>`;
+                });
+                table += `</select>`;
+            } else if (field.type === "number") {
+                table += `<input type="${field.type}" id="${field.id}-${i}" style="width:60px;">`;
+            } else {
+                table += `<input type="${field.type}" id="${field.id}-${i}" style="width:80px;">`;
+            }
+            table += `</td>`;
+        }
+        table += `</tr>`;
+    });
+
+    // 主星石行
+    table += `<tr><td class="attribute-row">主星石</td>`;
+    for (let i = 0; i < count; i++) {
+        table += `<td><div class="checkbox-group" id="main-stars-${i}">`;
+        MainStoneList.forEach(star => {
+            table += `
+                <div class="star-item">
+                    <input type="checkbox" id="main-star-${star}-${i}" value="${star}">
+                    <label for="main-star-${star}-${i}">${star}</label>
+                    <input type="number" id="main-star-level-${star}-${i}" min="1" max="15" style="width:40px;" placeholder="等级">
+                </div>`;
+        });
+        table += `</div></td>`;
+    }
+    table += `</tr>`;
+
+    // 辅星石行
+    table += `<tr><td class="attribute-row">辅星石</td>`;
+    for (let i = 0; i < count; i++) {
+        table += `<td><div class="checkbox-group" id="aux-stars-${i}">`;
+        AuxStoneList.forEach(star => {
+            table += `
+                <div class="star-item">
+                    <input type="checkbox" id="aux-star-${star}-${i}" value="${star}">
+                    <label for="aux-star-${star}-${i}">${star}</label>
+                    <input type="number" id="aux-star-level-${star}-${i}" min="1" max="15" style="width:40px;" placeholder="等级">
+                </div>`;
+        });
+        table += `</div></td>`;
+    }
+    table += `</tr>`;
+
+    // 命盘行
+    table += `<tr><td class="attribute-row">命盘</td>`;
+    for (let i = 0; i < count; i++) {
+        table += `<td><div class="checkbox-group" id="astro-group-${i}">`;
+        // 命盘会根据选择的角色动态更新
+        table += `<div>选择角色后显示可用命盘</div>`;
+        table += `</div></td>`;
+    }
+    table += `</tr>`;
+
+    table += `</tbody></table>`;
+    container.innerHTML = table;
+
+    // 初始化命盘选择
+    for (let i = 0; i < count; i++) {
+        updateAstroOptions(i);
+    }
+}
+
+// 2. Update the updateAstroOptions function to limit selection to 3
+function updateAstroOptions(index) {
+    const selectedSpy = document.getElementById(`char-name-${index}`).value;
+    const astroGroup = document.getElementById(`astro-group-${index}`);
+    astroGroup.innerHTML = '';
+    
+    if (AstroList[selectedSpy]) {
+        AstroList[selectedSpy].forEach(astro => {
+            const astroItem = document.createElement('div');
+            astroItem.className = 'star-item';
+            astroItem.innerHTML = `
+                <input type="checkbox" id="astro-${astro}-${index}" value="${astro}" 
+                       onclick="limitAstroSelection(${index}, 3)">
+                <label for="astro-${astro}-${index}">${astro}</label>
+            `;
+            astroGroup.appendChild(astroItem);
+        });
+    } else {
+        astroGroup.innerHTML = '<div>此角色无命盘数据</div>';
+    }
+}
+
+// 3. Add this new function to enforce the 3-option limit
+function limitAstroSelection(charIndex, maxAllowed) {
+    const checkboxes = document.querySelectorAll(`#astro-group-${charIndex} input[type="checkbox"]`);
+    let checkedCount = 0;
+    
+    // Count checked boxes
+    checkboxes.forEach(checkbox => {
+        if (checkbox.checked) checkedCount++;
+    });
+    
+    // If more than maxAllowed are checked, uncheck the earliest ones
+    if (checkedCount > maxAllowed) {
+        let unchecked = 0;
+        checkboxes.forEach(checkbox => {
+            if (checkbox.checked && unchecked < (checkedCount - maxAllowed)) {
+                checkbox.checked = false;
+                unchecked++;
+            }
+        });
+        alert(`每个角色最多选择${maxAllowed}个命盘！`);
+    }
+}
+
+// 生成回合行动输入表
+function generateRoundInputs() {
+    const roundCount = document.getElementById('round-count').value;
+    const charCount = document.getElementById('character-count').value;
+    const container = document.getElementById('round-inputs');
+    container.innerHTML = '';
+
+    let table = `<table><thead><tr><th>回合\\角色</th>`;
+    for (let i = 0; i < charCount; i++) {
+        table += `<th>角色${i+1}</th>`;
+    }
+    table += `<th>回合备注</th>`; // Add round note column
+    table += `</tr></thead><tbody>`;
+
+    for (let r = 0; r < roundCount; r++) {
+        table += `<tr><td>回合${r+1}</td>`;
+        for (let c = 0; c < charCount; c++) {
+            table += `<td><input type="text" id="round-${r}-${c}" style="width:80px;"></td>`;
+        }
+        table += `<td><input type="text" id="round-note-${r}" style="width:120px;" placeholder="回合备注"></td>`; // Add note input
+        table += `</tr>`;
+    }
+    table += `</tbody></table>`;
+    container.innerHTML = table;
+}
+
+// 生成攻略表格
+function generateTables() {
+    const stageName = document.getElementById('stage-name').value || "未命名关卡";
+    const charCount = parseInt(document.getElementById('character-count').value);
+    const roundCount = parseInt(document.getElementById('round-count').value);
+
+    // 生成角色信息表（垂直布局）
+    let charTable = `<h2>${stageName} - 密探面板</h2><table><thead><tr><th>属性</th>`;
+    
+    // 角色名称行
+    for (let i = 0; i < charCount; i++) {
+        const charName = document.getElementById(`char-name-${i}`).value;
+        charTable += `<th>${charName}</th>`;
+    }
+    charTable += `</tr></thead><tbody>`;
+    
+    // 角色图片行
+    charTable += `<tr><td>密探</td>`;
+    for (let i = 0; i < charCount; i++) {
+        const charName = document.getElementById(`char-name-${i}`).value;
+        const imageUrl = spyImageDataset[charName] || "default.png"; // Use your dataset
+        charTable += `<td><img src="${imageUrl}" alt="${charName}" style="width:80px;height:80px;"></td>`;
+    }
+    charTable += `</tr>`;
+
+    
+    // 基本属性行
+    const basicAttributes = [
+        { label: "叠星", id: "char-star" },
+        { label: "级别", id: "char-level" },
+        { label: "修为", id: "char-cultivation" },
+        { label: "血量", id: "char-hp" },
+        { label: "攻击", id: "char-atk" }
+    ];
+    
+    basicAttributes.forEach(attr => {
+        charTable += `<tr><td>${attr.label}</td>`;
+        for (let i = 0; i < charCount; i++) {
+            const value = document.getElementById(`${attr.id}-${i}`).value || "-";
+            charTable += `<td>${value}</td>`;
+        }
+        charTable += `</tr>`;
+    });
+    
+    // 主星石行
+    charTable += `<tr><td>主星石</td>`;
+    for (let i = 0; i < charCount; i++) {
+        charTable += `<td>`;
+        MainStoneList.forEach(star => {
+            const checkbox = document.getElementById(`main-star-${star}-${i}`);
+            const levelInput = document.getElementById(`main-star-level-${star}-${i}`);
+            if (checkbox && checkbox.checked && levelInput && levelInput.value) {
+                charTable += `${star}(${levelInput.value}级)<br>`;
+            }
+        });
+        charTable += `</td>`;
+    }
+    charTable += `</tr>`;
+    
+    // 辅星石行
+    charTable += `<tr><td>辅星石</td>`;
+    for (let i = 0; i < charCount; i++) {
+        charTable += `<td>`;
+        AuxStoneList.forEach(star => {
+            const checkbox = document.getElementById(`aux-star-${star}-${i}`);
+            const levelInput = document.getElementById(`aux-star-level-${star}-${i}`);
+            if (checkbox && checkbox.checked && levelInput && levelInput.value) {
+                charTable += `${star}(${levelInput.value}级)<br>`;
+            }
+        });
+        charTable += `</td>`;
+    }
+    charTable += `</tr>`;
+    
+    // 命盘行
+    charTable += `<tr><td>命盘</td>`;
+    for (let i = 0; i < charCount; i++) {
+        charTable += `<td>`;
+        const selectedSpy = document.getElementById(`char-name-${i}`).value;
+        if (AstroList[selectedSpy]) {
+            AstroList[selectedSpy].forEach(astro => {
+                const checkbox = document.getElementById(`astro-${astro}-${i}`);
+                if (checkbox && checkbox.checked) {
+                    charTable += `${astro}<br>`;
+                }
+            });
+        }
+        charTable += `</td>`;
+    }
+    charTable += `</tr>`;
+    
+    // 备注行
+    charTable += `<tr><td>备注</td>`;
+    for (let i = 0; i < charCount; i++) {
+        const note = document.getElementById(`char-note-${i}`).value || "-";
+        charTable += `<td>${note}</td>`;
+    }
+    charTable += `</tr>`;
+    
+    charTable += `</tbody></table>`;
+    document.getElementById('character-table').innerHTML = charTable;
+
+    // 生成回合表
+    let roundTable = `<h2>${stageName} - 回合行动</h2><table><thead><tr><th>回合</th>`;
+
+    // 添加角色名称
+    for (let i = 0; i < charCount; i++) {
+        const charName = document.getElementById(`char-name-${i}`).value;
+        roundTable += `<th>${charName}</th>`;
+    }
+    roundTable += `<th>回合备注</th></tr>`; // 添加回合备注列标题
+
+    // 添加角色图片行
+    roundTable += `<tr><td>密探</td>`;
+    for (let i = 0; i < charCount; i++) {
+        const charName = document.getElementById(`char-name-${i}`).value;
+        const imageUrl = spyImageDataset[charName] || "default.png"; // Use your dataset
+        roundTable += `<td><img src="${imageUrl}" alt="${charName}" style="width:50px;height:50px;"></td>`;
+    }
+    roundTable += `<td></td></tr>`; // 回合备注列的空单元格
+
+    // 添加回合行动
+    for (let r = 0; r < roundCount; r++) {
+        roundTable += `<tr><td>回合${r+1}</td>`;
+        for (let c = 0; c < charCount; c++) {
+            const val = document.getElementById(`round-${r}-${c}`).value || "-";
+            roundTable += `<td>${val}</td>`;
+        }
+        // 添加回合备注
+        const roundNote = document.getElementById(`round-note-${r}`).value || "-";
+        roundTable += `<td>${roundNote}</td>`;
+        roundTable += `</tr>`;
+    }
+    roundTable += `</tbody></table>`;
+    document.getElementById('round-table').innerHTML = roundTable;
+}
+
+// 导出表格为PNG
+function exportTablesToPNG() {
+    const stageName = document.getElementById('stage-name').value || "未命名关卡";
+    const target = document.createElement('div');
+    target.style.background = '#fff';
+    target.innerHTML = document.getElementById('character-table').innerHTML + document.getElementById('round-table').innerHTML;
+    document.body.appendChild(target);
+
+    html2canvas(target).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `${stageName}_攻略.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+        document.body.removeChild(target);
+    });
+}
+</script>
+
+</body>
+</html>
